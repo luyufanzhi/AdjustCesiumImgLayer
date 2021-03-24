@@ -6,14 +6,15 @@
  * how to use:  layer = await new AdjustCesiumImgLayer(Cesium).init()
  */
 
-const CesiumToken =
+let CesiumToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjY2JmMDBkNy1lMmU2LTRmYTEtYjEwYS03NDliMTdlYzkzZTIiLCJpZCI6NDUwMTYsImlhdCI6MTYxNDY2NzE2MH0.KdNWA62Ll4IKWcZt5C0eQUg_7Z35Dc9SnilnIoGimKI';
-const CesiumTokenUrl =
+let CesiumTokenUrl =
   `https://api.cesium.com/v1/assets/2/endpoint?access_token=${CesiumToken}`;
-const BingKey =
+let BingKey =
   'AmXdbd8UeUJtaRSn7yVwyXgQlBBUqliLbHpgn2c76DfuHwAXfRrgS5qwfHU6Rhm8';
-const BingJsonpUrl =
+let BingJsonpUrl =
   `https://dev.virtualearth.net/REST/v1/Imagery/Metadata/Aerial?jsonp=loadJsonp859530&incl=ImageryProviders&key=${BingKey}`;
+
 
 export default class AdjustCesiumImgLayer {
   constructor(Cesium) {
@@ -95,26 +96,42 @@ export default class AdjustCesiumImgLayer {
         false : true;
     } catch (error) {
       console.error(error)
-      return false
+      return false;
     }
   }
-
+  async fetchToken() {
+    let res = await fetch('https://map.airlook.com/open/auth/api/service/token/bing');
+    res = await res.json();
+    if (res.code === 200) {
+      CesiumToken = res.data.token;
+      CesiumTokenUrl = `https://api.cesium.com/v1/assets/2/endpoint?access_token=${CesiumToken}`;
+    }
+    res = await fetch(CesiumTokenUrl);
+    res = await res.json();
+    res.options && res.options.key && (BingKey = res.options.key);
+  }
   async init() {
     const Cesium = this.Cesium;
-    if (await this.fetchGoogle()) {
-      const url =
-        'https://{s}.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}';
-      this._layer = new Cesium.UrlTemplateImageryProvider({
-        id: 'google_image',
-        name: '谷歌影像',
-        url: url,
-        tilingScheme: new Cesium.WebMercatorTilingScheme(),
-        maximumLevel: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-      });
-      console.log('fetchGoogle');
-      return this._layer;
-    } else if (await this.fetchBing()) {
+    try {
+      await this.fetchToken();
+    } catch (error) {}
+    
+    // if (await this.fetchGoogle()) {
+    //   const url =
+    //     'https://{s}.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}';
+    //   this._layer = new Cesium.UrlTemplateImageryProvider({
+    //     id: 'google_image',
+    //     name: '谷歌影像',
+    //     url: url,
+    //     tilingScheme: new Cesium.WebMercatorTilingScheme(),
+    //     maximumLevel: 20,
+    //     subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    //   });
+    //   console.log('fetchGoogle');
+    //   return this._layer;
+    // } else 
+    
+    if (await this.fetchBing()) {
       Cesium.Ion.defaultAccessToken = CesiumToken;
       this._layer = Cesium.createWorldImagery({
         style: Cesium.IonWorldImageryStyle.AERIAL,
